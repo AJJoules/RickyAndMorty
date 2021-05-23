@@ -1,10 +1,9 @@
 package ng.com.ajsprojects.rickyandmorty.models
 
-import com.google.gson.annotations.SerializedName
-import java.io.Serializable
-
 data class CharacterData(
-
-    @SerializedName("results")
-    val results: List<Result>
-) : Serializable
+    val id: Int,
+    val image: String,
+    val name: String,
+    val species: String,
+    val status: String,
+)

@@ -1,44 +1,49 @@
 package ng.com.ajsprojects.rickyandmorty
 
-import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.GridLayoutManager
 import kotlinx.android.synthetic.main.activity_main.*
-import ng.com.ajsprojects.rickyandmorty.models.Result
+import ng.com.ajsprojects.rickyandmorty.models.CharacterData
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : AppCompatActivity() {
-    private val viewModel by lazy {
-        ViewModelProviders.of(this)[ViewModel::class.java]
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-
-        val adapter = MainAdapter(object : MainAdapter.OnItemClickedListener {
-            override fun onItemClicked(result: Result) {
-                val selectedItem = result.id
-                val intent = Intent(applicationContext, DetailActivity::class.java)
-                intent.putExtra(MainAdapter.CHARACTER_NAME, result.name)
-                intent.putExtra(MainAdapter.CHARACTER_IMAGE, result.photoUrl)
-                intent.putExtra(MainAdapter.CHARACTER_STATUS, result.status)
-                intent.putExtra(MainAdapter.CHARACTER_SPECIE, result.species)
-                intent.putExtra(MainAdapter.CHARACTER_GENDER, result.gender)
-                intent.putExtra(MainAdapter.CHARACTER_ORIGIN_NAME,result.origin.name)
-                intent.putExtra(MainAdapter.CHARACTER_ORIGIN_URL,result.origin.url)
-                startActivity(intent)
-
-            }
-        })
-        recyclerView.adapter = adapter
-        recyclerView.layoutManager = GridLayoutManager(this, 2)
-        viewModel.getCharacters().observe(this, {
-            adapter.setupData(it.results)
-            adapter.notifyDataSetChanged()
-        })
+        loadCharacters()
 
     }
+
+    private fun loadCharacters() {
+        //initiate the service
+        val destinationService  = ServiceBuilder.buildService(CharacterService::class.java)
+        val requestCall =destinationService.getCharacterList()
+        //make network call asynchronously
+        requestCall.enqueue(object : Callback<List<CharacterData>> {
+            override fun onResponse(call: Call<List<CharacterData>>, response: Response<List<CharacterData>>) {
+                Log.d("Response", "onResponse: ${response.body()}")
+                if (response.isSuccessful){
+                    val characterList  = response.body()!!
+                    Log.d("Response", "characterlist size : ${characterList.size}")
+                    recyclerView.apply {
+                        setHasFixedSize(true)
+                        layoutManager = GridLayoutManager(this@MainActivity,2)
+                        adapter = CharacterAdapter(response.body()!!)
+                    }
+                }else{
+                    Toast.makeText(this@MainActivity, "Something went wrong ${response.message()}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onFailure(call: Call<List<CharacterData>>, t: Throwable) {
+                Toast.makeText(this@MainActivity, "Something went wrong $t", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+
 }
